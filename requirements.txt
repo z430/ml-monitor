@@ -1,0 +1,6 @@
+# local package
+-e .
+
+# external requirements
+fiftyone=0.19.1
+torch=1.13.1
