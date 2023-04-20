@@ -29,32 +29,33 @@ class FiftyOneDataset:
         with fo.ProgressBar() as pb:
             for sample in pb(self.dataset):
                 image = self.load_image_as_numpy(sample)
-                h, w = image.shape[:2]
 
                 # Inference
                 results = model([image])
-                results = self.get_bounding_boxes_numpy(results)
 
                 labels = results[:, 5].astype(int)
                 scores = results[:, 4]
                 boxes = results[:, :4]
 
-                detections = []
+                self.add_predictions_to_sample(labels, scores, boxes, sample)
 
-                for label, score, box in zip(labels, scores, boxes):
-                    # convert to tlwh in relative coordinates
-                    x1, y1, x2, y2 = box
-                    rel_box = [x1 / w, y1 / h, (x2 - x1) / w, (y2 - y1) / h]
-                    detections.append(
-                        fo.Detection(
-                            label=self.classes[label],
-                            bounding_box=rel_box,
-                            confidence=score,
-                        )
-                    )
-                # save predictions to dataset
-                sample["predictions"] = fo.Detections(detections=detections)
-                sample.save()
+    def add_predictions_to_sample(
+        self, labels, scores, boxes, sample: fo.Sample
+    ) -> None:
+        h, w = sample.size
+        detections = []
 
-    def get_bounding_boxes_numpy(self, results):
-        return results.xyxy[0].numpy()
+        for label, score, box in zip(labels, scores, boxes):
+            # convert to tlwh in relative coordinates
+            x1, y1, x2, y2 = box
+            rel_box = [x1 / w, y1 / h, (x2 - x1) / w, (y2 - y1) / h]
+            detections.append(
+                fo.Detection(
+                    label=self.classes[label],
+                    bounding_box=rel_box,
+                    confidence=score,
+                )
+            )
+        # save predictions to dataset
+        sample["predictions"] = fo.Detections(detections=detections)
+        sample.save()
